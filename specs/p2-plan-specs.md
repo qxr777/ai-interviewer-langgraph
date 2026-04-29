@@ -212,7 +212,7 @@ tests-e2e/                # 端到端测试（Playwright）
 |------|------|----------|
 | 图编排 | LangGraph | >= 0.2.0 |
 | LLM 编排框架 | LangChain Core | 与 LangGraph 配套版本 |
-| LLM 提供商（MVP） | OpenAI API (gpt-4o) | 可替换，通过 `config.py` 切换 |
+| LLM 提供商（MVP） | OpenAI 兼容接口 (如 DeepSeek, Qwen) | 可替换，通过 `config.py` 切换，需支持 `base_url` |
 | 数据校验 | Pydantic v2 | 用于 InterviewState 和工具参数校验 |
 | 测试框架 | pytest + pytest-asyncio | 异步图节点测试 |
 | 持久化（MVP） | LangGraph 内置 MemorySaver | MVP 阶段内存存储，后续可切换 Postgres |
@@ -277,6 +277,7 @@ tests-e2e/                # 端到端测试（Playwright）
 | 维度 | MVP 方案 | 说明 |
 |------|----------|------|
 | LLM API Key | 环境变量 `OPENAI_API_KEY` | 绝不硬编码或提交至版本控制 |
+| LLM Base URL | 环境变量 `OPENAI_API_BASE` | 国内加速接口或私有部署地址 |
 | 配置文件 | `.env` + `.gitignore` | 项目根目录维护 `.env.example` 模板 |
 | 凭证泄漏防护 | `git-secrets` 或 `detect-secrets` pre-commit hook | 阻止密钥误提交至 git |
 

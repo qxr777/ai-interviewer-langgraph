@@ -1,0 +1,18 @@
+{
+  "candidate_info": {
+    "name": "张三",
+    "skills": ["Python", "FastAPI", "PostgreSQL", "Docker", "Redis"],
+    "experience_years": 5,
+    "education": "本科 - 计算机科学"
+  },
+  "interview_plan": [
+    {"topic_id": "topic_1", "topic_name": "Python 基础", "status": "pending"},
+    {"topic_id": "topic_2", "topic_name": "系统设计", "status": "pending"},
+    {"topic_id": "topic_3", "topic_name": "数据库优化", "status": "pending"}
+  ],
+  "chat_history": [],
+  "current_topic_id": "topic_1",
+  "current_topic_index": 0,
+  "evaluation_records": [],
+  "routing_flag": "CONTINUE"
+}

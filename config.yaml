@@ -1,0 +1,19 @@
+# ============================================================
+# 非敏感业务配置（可不经代码修改调整）
+# ============================================================
+
+# 评估官并发数
+evaluator_count: 3
+
+# 治理标准差阈值
+sigma_high: 5.0      # σ ≤ 5.0 → 高置信度 (CONTINUE)
+sigma_medium: 15.0   # 5.0 < σ ≤ 15.0 → 中等置信度 (RETRY)
+
+# 重试与熔断上限
+max_retries_per_topic: 3
+max_global_rounds: 30
+max_consecutive_medium: 3
+max_invalid_inputs: 3
+
+# LLM 超时（秒）
+llm_timeout: 30

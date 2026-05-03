@@ -1,16 +1,17 @@
 // Auto-generated TypeScript types aligned with backend Pydantic models
 // Source: src/state.py
+// Do not edit manually — run `python scripts/generate_ts_types.py` to regenerate.
 
 export type RoutingFlag = 'CONTINUE' | 'RETRY' | 'ESCALATE' | 'END'
 
 export interface TopicItem {
   topic_id: string
   topic_name: string
-  status: 'pending' | 'in_progress' | 'completed'
+  status: string
 }
 
 export interface ChatMessage {
-  role: 'system' | 'ai' | 'candidate'
+  role: string
   content: string
   topic_id: string | null
 }
@@ -19,19 +20,6 @@ export interface EvaluationRecord {
   score: number
   topic_id: string
   rationale: string
-}
-
-export interface InterviewState {
-  candidate_info: Record<string, unknown>
-  interview_plan: TopicItem[]
-  chat_history: ChatMessage[]
-  current_topic_id: string | null
-  current_topic_index: number
-  evaluation_records: EvaluationRecord[]
-  routing_flag: RoutingFlag
-  report: InterviewReport | null
-  next_node: string
-  human_intervened: boolean
 }
 
 export interface InterviewReport {
@@ -51,9 +39,21 @@ export interface ReportTopic {
   rationales: string[]
 }
 
-// API request/response types
+export interface InterviewState {
+  candidate_info: Record<string, unknown>
+  interview_plan: TopicItem[] | null
+  chat_history: ChatMessage[] | null
+  current_topic_id: string | null
+  current_topic_index: number
+  evaluation_records: EvaluationRecord[] | null
+  routing_flag: RoutingFlag
+  report: Record<string, unknown> | null
+  next_node: string
+  human_intervened: boolean
+}
+
 export interface StartInterviewRequest {
-  resume_file: string  // base64 encoded PDF/DOCX
+  resume_file: string
   job_description: string
 }
 
@@ -71,8 +71,8 @@ export interface AnswerRequest {
 
 export interface AnswerResponse {
   ai_response: string | null
-  scores: EvaluationRecord[]
-  interview_plan: TopicItem[]
+  scores: EvaluationRecord[] | null
+  interview_plan: TopicItem[] | null
   current_topic_id: string | null
   routing_flag: RoutingFlag | null
   status: string
@@ -90,17 +90,16 @@ export interface ArbitrateResponse {
 export interface StatusResponse {
   routing_flag: RoutingFlag
   current_topic_id: string | null
-  current_topic_index?: number
-  chat_history?: ChatMessage[]
-  interview_plan?: TopicItem[]
+  current_topic_index: number | null
+  chat_history: ChatMessage[] | null
+  interview_plan: TopicItem[] | null
   chat_count: number
 }
 
-// SSE event types
 export interface SSEEvent {
   type: 'status' | 'message' | 'heartbeat'
-  flag?: RoutingFlag
-  role?: string
-  content?: string
-  topic_id?: string | null
+  flag: RoutingFlag | null
+  role: string | null
+  content: string | null
+  topic_id: string | null
 }

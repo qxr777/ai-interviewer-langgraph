@@ -32,6 +32,12 @@ jobs:
       - name: ruff format
         run: ruff format --check src/ tests/
 
+      - name: generate TS types
+        run: python scripts/generate_ts_types.py --output web/src/types/generated.ts
+
+      - name: verify TS types unchanged
+        run: git diff --exit-code web/src/types/generated.ts -- 'Generated TypeScript types are stale — run `python scripts/generate_ts_types.py`'
+
       - name: mypy
         run: python -m mypy src/
 

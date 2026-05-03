@@ -30,8 +30,8 @@ interface InterviewState {
   startInterview: (resumeBase64: string, jd: string) => Promise<string>
   submitAnswer: (answer: string) => Promise<void>
   arbitrate: (action: 'CONTINUE' | 'SKIP' | 'END') => Promise<void>
-  refreshStatus: () => Promise<void>
-  refreshReport: () => Promise<void>
+  refreshStatus: (overrideId?: string) => Promise<void>
+  refreshReport: (overrideId?: string) => Promise<void>
   addMessage: (msg: ChatMessage) => void
   clearError: () => void
 }

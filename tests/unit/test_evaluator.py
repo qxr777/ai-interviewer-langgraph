@@ -5,9 +5,9 @@
 
 
 def _get_evaluator():
-    from src.agents.evaluator import node_parallel_evaluator
+    from src.agents.evaluator import NodeParallelEvaluator
 
-    return node_parallel_evaluator
+    return NodeParallelEvaluator
 
 
 class TestNodeParallelEvaluator:
@@ -15,7 +15,7 @@ class TestNodeParallelEvaluator:
 
     def test_returns_n_scores(self, mock_interview_plan, mock_evaluation_scores):
         """N=3 并行调用 → 返回 3 个评分。"""
-        node_parallel_evaluator = _get_evaluator()
+        evaluator_cls = _get_evaluator()
         from src.state import InterviewState
 
         state = InterviewState(
@@ -29,7 +29,7 @@ class TestNodeParallelEvaluator:
             routing_flag="CONTINUE",
         )
 
-        evaluator = node_parallel_evaluator(llm_model="mock", evaluator_count=3)
+        evaluator = evaluator_cls(llm_model="mock", evaluator_count=3)
         result = evaluator(state)
 
         assert "evaluation_records" in result
@@ -37,7 +37,7 @@ class TestNodeParallelEvaluator:
 
     def test_score_in_range(self, mock_interview_plan, mock_evaluation_scores):
         """每个 score ∈ [1, 100]。"""
-        node_parallel_evaluator = _get_evaluator()
+        evaluator_cls = _get_evaluator()
         from src.state import InterviewState
 
         state = InterviewState(
@@ -51,7 +51,7 @@ class TestNodeParallelEvaluator:
             routing_flag="CONTINUE",
         )
 
-        evaluator = node_parallel_evaluator(llm_model="mock", evaluator_count=3)
+        evaluator = evaluator_cls(llm_model="mock", evaluator_count=3)
         result = evaluator(state)
 
         for record in result["evaluation_records"]:
@@ -59,7 +59,7 @@ class TestNodeParallelEvaluator:
 
     def test_rationale_min_length(self, mock_interview_plan, mock_evaluation_scores):
         """每个 rationale 长度 ≥ 50。"""
-        node_parallel_evaluator = _get_evaluator()
+        evaluator_cls = _get_evaluator()
         from src.state import InterviewState
 
         state = InterviewState(
@@ -73,7 +73,7 @@ class TestNodeParallelEvaluator:
             routing_flag="CONTINUE",
         )
 
-        evaluator = node_parallel_evaluator(llm_model="mock", evaluator_count=3)
+        evaluator = evaluator_cls(llm_model="mock", evaluator_count=3)
         result = evaluator(state)
 
         for record in result["evaluation_records"]:
@@ -81,7 +81,7 @@ class TestNodeParallelEvaluator:
 
     def test_topic_id_matches(self, mock_interview_plan, mock_evaluation_scores):
         """每个 topic_id 应匹配 current_topic_id。"""
-        node_parallel_evaluator = _get_evaluator()
+        evaluator_cls = _get_evaluator()
         from src.state import InterviewState
 
         state = InterviewState(
@@ -95,7 +95,7 @@ class TestNodeParallelEvaluator:
             routing_flag="CONTINUE",
         )
 
-        evaluator = node_parallel_evaluator(llm_model="mock", evaluator_count=3)
+        evaluator = evaluator_cls(llm_model="mock", evaluator_count=3)
         result = evaluator(state)
 
         for record in result["evaluation_records"]:

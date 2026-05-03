@@ -52,8 +52,13 @@ def _extract_pdf(path: Path) -> str:
     """从 PDF 提取文本。"""
     try:
         from PyPDF2 import PdfReader
+        from PyPDF2.errors import EmptyFileError, PdfReadError
 
-        reader = PdfReader(str(path))
+        try:
+            reader = PdfReader(str(path))
+        except (EmptyFileError, PdfReadError) as e:
+            raise ValueError(f"PDF 文件为空或格式错误: {path}") from e
+
         text = ""
         for page in reader.pages:
             text += page.extract_text() or ""
@@ -62,8 +67,13 @@ def _extract_pdf(path: Path) -> str:
         # 如果没有 PyPDF2，尝试用 pypdf
         try:
             from pypdf import PdfReader  # type: ignore[assignment]
+            from pypdf.errors import PdfReadError as PyPdfReadError
 
-            reader = PdfReader(str(path))
+            try:
+                reader = PdfReader(str(path))
+            except PyPdfReadError as e:
+                raise ValueError(f"PDF 文件为空或格式错误: {path}") from e
+
             text = ""
             for page in reader.pages:
                 text += page.extract_text() or ""

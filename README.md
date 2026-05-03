@@ -89,6 +89,7 @@ npm run dev
 | 连续 3 次中置信度 | 累计熔断 | 前端仲裁介入 |
 
 - [Harness 设计](docs/harness.md) — 如何用确定性代码包裹非确定性 LLM
+- [Context Engineering 设计](docs/context-engineering.md) — 如何精确控制传递给 LLM Agent 的上下文信息
 
 ### 项目结构
 

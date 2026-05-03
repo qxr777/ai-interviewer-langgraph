@@ -22,6 +22,7 @@ interface InterviewState {
   report: InterviewReport | null
   loading: boolean
   error: string | null
+  isEscalated: boolean
   // Maps message index to scores for that answer
   scoresByIndex: Record<number, EvaluationRecord[]>
 
@@ -49,6 +50,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   report: null,
   loading: false,
   error: null,
+  isEscalated: false,
   scoresByIndex: {},
 
   setInterviewId: (id) => set({ interviewId: id }),
@@ -131,7 +133,10 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
     const { interviewId } = get()
     if (!interviewId) return
     await api.arbitrate(interviewId, { action })
-    set({ routingFlag: action === 'END' ? 'END' : 'CONTINUE' })
+    set({
+      routingFlag: action === 'END' ? 'END' : 'CONTINUE',
+      isEscalated: false,
+    })
   },
 
   refreshStatus: async (overrideId?: string) => {

@@ -95,6 +95,7 @@ export default function InterviewPage() {
   const chatHistory = useInterviewStore((s) => s.chatHistory)
   const currentTopicId = useInterviewStore((s) => s.currentTopicId)
   const routingFlag = useInterviewStore((s) => s.routingFlag)
+  const isEscalated = useInterviewStore((s) => s.isEscalated)
   const loading = useInterviewStore((s) => s.loading)
   const error = useInterviewStore((s) => s.error)
   const clearError = useInterviewStore((s) => s.clearError)
@@ -112,15 +113,15 @@ export default function InterviewPage() {
   }, [chatHistory])
 
   useEffect(() => {
-    if (routingFlag === 'ESCALATE') {
-      addToast('需要人工仲裁', 'info')
-      navigate(`/arbitration/${id}`)
+    if (routingFlag === 'ESCALATE' && !isEscalated) {
+      useInterviewStore.setState({ isEscalated: true })
+      addToast('评分分歧过大，等待面试官审核', 'info')
     }
     if (routingFlag === 'END') {
       addToast('面试已结束', 'info')
       navigate(`/report/${id}`)
     }
-  }, [routingFlag, id, navigate, addToast])
+  }, [routingFlag, isEscalated, id, navigate, addToast])
 
   // 立即同步 + 定期同步后端状态
   useEffect(() => {
@@ -168,6 +169,8 @@ export default function InterviewPage() {
           if (s.routingFlag !== null) return {}
           if (event.flag === 'ESCALATE') return { routingFlag: 'ESCALATE' as const }
           if (event.flag === 'END') return { routingFlag: 'END' as const }
+          // 面试官仲裁后恢复
+          if (event.flag === 'CONTINUE') return { isEscalated: false, loading: false }
           return {}
         })
       }
@@ -261,6 +264,30 @@ export default function InterviewPage() {
           })}
           <div ref={messagesEnd} />
         </div>
+
+        {/* Escalation Overlay */}
+        {isEscalated && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">等待面试官审核</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                评估官对您的回答评分存在较大分歧，面试官正在审核当前回答，请稍候...
+              </p>
+              <div className="flex items-center justify-center gap-2 text-yellow-600">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span className="text-sm font-medium">审核中</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Input */}
         <div className="bg-white border-t px-6 py-4">

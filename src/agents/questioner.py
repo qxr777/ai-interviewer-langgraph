@@ -5,6 +5,24 @@ import re
 from src.state import ChatMessage, InterviewState
 from src.utils.prompts import QUESTIONER_PROMPT
 
+# 注入攻击检测模式（不区分大小写）
+_INJECTION_PATTERNS = [
+    r"(?:ignore\s+(?:all\s+)?previous\s+(?:instructions|rules|prompts))",
+    r"(?:disregard\s+(?:all\s+)?(?:previous|above)\s+(?:instructions|rules))",
+    r"(?:you\s+are\s+now\s+(?:acting\s+as\s+)?(?:a|an)?\s*\w+)",
+    r"(?:system\s*[:：]\s*(?!.*\bquestion\b))",
+    r"(?:<\|system\|>|<\|user\|>|<\|assistant\|>)",
+    r"(?:\bnew\s+instructions?\b.*\bforget\b)",
+    r"(?:\bskip\s+(?:all|the)\s+(?:steps|questions|rules))",
+    r"(?:\bpretend\s+to\s+be\b|\bas\s+if\s+you\s+are\b)",
+    r"(?:\breveal\s+(?:your|the)\s+(?:system|prompt|instructions))",
+    r"(?:\bshow\s+(?:me|your)\s+(?:system\s+)?prompt)",
+    r"(?:\bwhat\s+are\s+your\s+(?:instructions|rules|constraints|guidelines))",
+    r"(?:\bhow\s+are\s+(?:you|this)\s+(?:prompted|configured|designed))",
+]
+
+_INJECTION_RE = re.compile("|".join(_INJECTION_PATTERNS), re.IGNORECASE)
+
 
 class NodeQuestioner:
     """面试提问官节点。
@@ -19,6 +37,20 @@ class NodeQuestioner:
     def __call__(self, state: InterviewState) -> dict:
         topic = self._get_current_topic(state)
         history = self._format_history(state)
+
+        # 输入预处理：在 LLM 调用前检查候选人回答是否含注入攻击
+        if not self.use_mock:
+            latest_candidate = self._get_latest_candidate_answer(state)
+            if latest_candidate and _INJECTION_RE.search(latest_candidate):
+                question = f"请围绕「{topic}」继续作答，不要提出与面试议题无关的问题。"
+                new_message = ChatMessage(
+                    role="ai",
+                    content=question,
+                    topic_id=state.current_topic_id,
+                )
+                chat_history = list(state.chat_history)
+                chat_history.append(new_message)
+                return {"chat_history": chat_history}
 
         if self.use_mock:
             question = self._mock_question(topic, history)
@@ -78,6 +110,13 @@ class NodeQuestioner:
         for msg in state.chat_history:
             lines.append(f"[{msg.role}] {msg.content}")
         return "\n".join(lines)
+
+    def _get_latest_candidate_answer(self, state: InterviewState) -> str | None:
+        """获取候选人最新一次回答。"""
+        for msg in reversed(state.chat_history):
+            if msg.role == "candidate":
+                return msg.content
+        return None
 
     def _strip_score_patterns(self, text: str) -> str:
         """移除可能包含评分的模式。"""

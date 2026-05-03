@@ -12,3 +12,6 @@ __pycache__/
 *.pyo
 logs/
 state_snapshot_*.json
+package-lock.json
+test-results/.last-run.json
+web/test-results/.last-run.json

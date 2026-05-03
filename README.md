@@ -90,6 +90,7 @@ npm run dev
 
 - [Harness 设计](docs/harness.md) — 如何用确定性代码包裹非确定性 LLM
 - [Context Engineering 设计](docs/context-engineering.md) — 如何精确控制传递给 LLM Agent 的上下文信息
+- [多智能体协作与动态规划](docs/multi-agent-coordination.md) — Agent 角色分工、σ 驱动路由、动态调整策略
 
 ### 项目结构
 

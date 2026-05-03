@@ -90,6 +90,9 @@ export interface ArbitrateResponse {
 export interface StatusResponse {
   routing_flag: RoutingFlag
   current_topic_id: string | null
+  current_topic_index?: number
+  chat_history?: ChatMessage[]
+  interview_plan?: TopicItem[]
   chat_count: number
 }
 

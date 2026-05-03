@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/interview': {
+      // Only proxy API routes — exclude the SPA route /interview/:id
+      '^/interview/(start|[^/]+/(answer|arbitrate|status|report|stream))': {
         target: 'http://localhost:8765',
         changeOrigin: true,
       },

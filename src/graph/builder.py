@@ -273,7 +273,13 @@ def _make_router_node(mock_sigma: float | None = None, force_consecutive_medium:
             if s.routing_flag in (RoutingFlag.CONTINUE, RoutingFlag.RETRY):
                 return {"next_node": "questioner"}
             else:
-                return {"next_node": "reporting"}
+                # 人工 END 时标记当前议题已完成
+                plan = [_to_dict(t) for t in s.interview_plan]
+                for t in plan:
+                    if t["topic_id"] == s.current_topic_id:
+                        t["status"] = "completed"
+                        break
+                return {"interview_plan": plan, "next_node": "reporting"}
 
         records = s.evaluation_records
         if records:
@@ -293,34 +299,29 @@ def _make_router_node(mock_sigma: float | None = None, force_consecutive_medium:
 
         updates: dict = {}
 
-        # Convert current records to dicts
-        current_records = []
-        for rec in s.evaluation_records:
-            if isinstance(rec, dict):
-                current_records.append(rec)
-            else:
-                current_records.append(rec.model_dump())
-
         if decision == RoutingDecision.QUESTIONER:
             update_dict, next_node = _advance_topic(s)
             updates.update(update_dict)
             updates["next_node"] = next_node
-            # Accumulate records
-            if hasattr(_counters, '_records'):
-                _counters._records.extend(current_records)
-            else:
-                _counters._records = list(current_records)
-            updates["evaluation_records"] = list(_counters._records)
         elif decision == RoutingDecision.REPORTING:
+            # 标记当前议题已完成
+            plan = [_to_dict(t) for t in s.interview_plan]
+            for t in plan:
+                if t["topic_id"] == s.current_topic_id:
+                    t["status"] = "completed"
+                    break
+            updates["interview_plan"] = plan
             updates["next_node"] = "reporting"
-            if hasattr(_counters, '_records'):
-                _counters._records.extend(current_records)
-                updates["evaluation_records"] = list(_counters._records)
-            else:
-                updates["evaluation_records"] = current_records
         elif decision == RoutingDecision.SUPERVISOR:
             updates["next_node"] = "supervisor"
         else:
+            # UNKNOWN 也标记当前议题完成再结束
+            plan = [_to_dict(t) for t in s.interview_plan]
+            for t in plan:
+                if t["topic_id"] == s.current_topic_id:
+                    t["status"] = "completed"
+                    break
+            updates["interview_plan"] = plan
             updates["next_node"] = "reporting"
 
         return updates

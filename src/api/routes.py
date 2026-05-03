@@ -1,5 +1,10 @@
 """REST API 路由。"""
 
+import asyncio
+import base64
+import os
+import tempfile
+import uuid
 import base64
 import os
 import tempfile
@@ -10,7 +15,8 @@ from pydantic import BaseModel
 
 from src.api.sessions import interview_sessions
 from src.config import load_config
-from src.graph.builder import build_interview_graph
+from src.graph.builder import build_interview_graph, generate_report
+from src.graph.governance import calculate_std
 from src.state import InterviewState, RoutingFlag
 
 router = APIRouter()
@@ -29,6 +35,13 @@ class ArbitrateRequest(BaseModel):
     action: str
 
 
+async def _push_event(interview_id: str, event: dict):
+    """推送 SSE 事件到 session 队列。"""
+    session = interview_sessions.get(interview_id)
+    if session and "event_queue" in session:
+        await session["event_queue"].put(event)
+
+
 @router.post("/start")
 async def start_interview(req: StartInterviewRequest):
     interview_id = str(uuid.uuid4())
@@ -41,7 +54,15 @@ async def start_interview(req: StartInterviewRequest):
 
     from src.tools.resume_parser import parse_resume_document
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+    # Detect file type from magic bytes
+    if file_bytes[:2] == b'PK':
+        suffix = '.docx'
+    elif file_bytes[:4] == b'%PDF':
+        suffix = '.pdf'
+    else:
+        suffix = '.docx'  # fallback
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(file_bytes)
         tmp_path = tmp.name
 
@@ -112,6 +133,7 @@ async def start_interview(req: StartInterviewRequest):
     interview_sessions[interview_id] = {
         "graph": graph,
         "state": started_state,
+        "event_queue": asyncio.Queue(),
     }
 
     # 提取第一条 AI 提问
@@ -143,44 +165,71 @@ async def submit_answer(interview_id: str, req: AnswerRequest):
     graph = session["graph"]
 
     from src.state import ChatMessage
-    state.chat_history.append(ChatMessage(
+    new_msg = ChatMessage(
         role="candidate",
         content=req.answer,
         topic_id=state.current_topic_id,
-    ))
+    )
 
-    state_dict = state.model_dump()
     config = {"configurable": {"thread_id": interview_id}}
-    result = graph.invoke(state_dict, config)
 
-    session["state"] = InterviewState(**result)
+    # 从 checkpoint 获取累计的评分数量
+    prev_snapshot = graph.get_state(config)
+    prev_count = len(prev_snapshot.values.get("evaluation_records", []))
 
-    updated = InterviewState(**result)
+    # 只传递变更的字段：chat_history 仅传新消息（由 reducer 累加），evaluation_records 置空
+    state_dict = state.model_dump()
+    state_dict["chat_history"] = [new_msg.model_dump()]
+    state_dict["evaluation_records"] = []
 
     ai_message = None
+
+    # SSE: 推送开始处理状态
+    await _push_event(interview_id, {"type": "status", "flag": "processing"})
+
+    # 使用 astream 逐节点推送 SSE 事件
+    async for event in graph.astream(state_dict, config):
+        for node_name, update in event.items():
+            if node_name == "questioner" and isinstance(update, dict):
+                chat_updates = update.get("chat_history", [])
+                for msg in chat_updates:
+                    role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", None)
+                    content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", None)
+                    if role == "ai" and content:
+                        ai_message = content
+                        await _push_event(interview_id, {
+                            "type": "message",
+                            "role": "ai",
+                            "content": content,
+                        })
+            elif node_name == "router" and isinstance(update, dict):
+                next_node = update.get("next_node", "")
+                flag_map = {
+                    "questioner": "CONTINUE",
+                    "supervisor": "ESCALATE",
+                    "reporting": "END",
+                }
+                flag = flag_map.get(next_node)
+                if flag:
+                    await _push_event(interview_id, {"type": "status", "flag": flag})
+            elif node_name == "evaluator":
+                await _push_event(interview_id, {"type": "status", "flag": "evaluating"})
+
+    # 从 checkpoint 读取最终状态（reducer 已在 astream 内部应用）
+    checkpoint = graph.get_state(config)
+    updated = InterviewState(**checkpoint.values)
+    session["state"] = updated
+
+    # 提取评分
     scores = []
-    prev_count = len(state.evaluation_records)
-    new_records = result.get("evaluation_records", [])[prev_count:]
-
-    for msg in reversed(result.get("chat_history", [])):
-        if isinstance(msg, dict):
-            if msg.get("role") == "ai":
-                ai_message = msg["content"]
-                break
-        else:
-            if msg.role == "ai":
-                ai_message = msg.content
-                break
-
+    new_records = updated.evaluation_records[prev_count:]
     for rec in new_records:
         if isinstance(rec, dict):
             scores.append({"score": rec["score"], "rationale": rec["rationale"], "topic_id": rec["topic_id"]})
         else:
             scores.append({"score": rec.score, "rationale": rec.rationale, "topic_id": rec.topic_id})
 
-    # 检测评分分歧：σ > 15.0 触发人工仲裁
-    import math
-    from src.graph.governance import calculate_std
+    # 检测评分分歧
     routing_flag = updated.routing_flag.value if hasattr(updated.routing_flag, "value") else updated.routing_flag
     if scores:
         score_values = [s["score"] for s in scores]
@@ -188,6 +237,18 @@ async def submit_answer(interview_id: str, req: AnswerRequest):
         if sigma > 15.0:
             session["state"].routing_flag = RoutingFlag.ESCALATE
             routing_flag = RoutingFlag.ESCALATE.value
+            await _push_event(interview_id, {"type": "status", "flag": "ESCALATE"})
+
+    if not ai_message:
+        for msg in reversed(updated.chat_history):
+            if isinstance(msg, dict):
+                if msg.get("role") == "ai":
+                    ai_message = msg["content"]
+                    break
+            else:
+                if msg.role == "ai":
+                    ai_message = msg.content
+                    break
 
     return {
         "ai_response": ai_message,
@@ -218,6 +279,7 @@ async def arbitrate(interview_id: str, req: ArbitrateRequest):
     elif req.action == "END":
         state.routing_flag = RoutingFlag.END
 
+    await _push_event(interview_id, {"type": "status", "flag": req.action})
     session["state"] = state
     return {"status": "ok", "action": req.action}
 
@@ -232,6 +294,9 @@ async def get_status(interview_id: str):
     return {
         "routing_flag": state.routing_flag.value if hasattr(state.routing_flag, "value") else state.routing_flag,
         "current_topic_id": state.current_topic_id,
+        "current_topic_index": state.current_topic_index,
+        "chat_history": [m.model_dump() if hasattr(m, "model_dump") else m for m in state.chat_history],
+        "interview_plan": [t.model_dump() if hasattr(t, "model_dump") else t for t in state.interview_plan],
         "chat_count": len(state.chat_history),
     }
 
@@ -243,4 +308,18 @@ async def get_report(interview_id: str):
 
     session = interview_sessions[interview_id]
     state = session["state"]
-    return state.report or {"status": "no_valid_evaluations", "topics": []}
+
+    if state.report:
+        return state.report
+
+    # 面试未结束，从 session 内存状态读取评估记录生成临时报告
+    # （ANSWER 端点会在 astream 完成后更新 session["state"]）
+    records = []
+    for rec in state.evaluation_records:
+        if isinstance(rec, dict):
+            records.append(rec)
+        else:
+            records.append(rec.model_dump())
+
+    plan_dicts = [t.model_dump() if hasattr(t, "model_dump") else t for t in state.interview_plan]
+    return generate_report(records, plan_dicts)

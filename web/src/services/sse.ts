@@ -37,6 +37,10 @@ export class SSEClient {
     this.eventSource?.close()
     this.eventSource = null
   }
+
+  isConnected(): boolean {
+    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN
+  }
 }
 
 export const sseClient = new SSEClient()

@@ -1,16 +1,18 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useInterviewStore } from '../stores/interviewStore'
+import { sseClient } from '../services/sse'
 
 export default function ReportPage() {
-  const { id: _id } = useParams<{ id: string }>() as { id: string }
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const report = useInterviewStore((s) => s.report)
   const refreshReport = useInterviewStore((s) => s.refreshReport)
 
   useEffect(() => {
-    refreshReport()
-  }, [refreshReport])
+    refreshReport(id)
+    sseClient.disconnect()
+  }, [refreshReport, id])
 
   if (!report) {
     return (

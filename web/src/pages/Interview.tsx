@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useInterviewStore } from '../stores/interviewStore'
 import { useUIStore } from '../stores/uiStore'
-import type { EvaluationRecord, TopicItem } from '../types/generated'
+import { sseClient } from '../services/sse'
+import type { EvaluationRecord, TopicItem, SSEEvent } from '../types/generated'
 
 function ScoreCard({ scores }: { scores: EvaluationRecord[] }) {
   const [expanded, setExpanded] = useState(false)
@@ -90,6 +91,7 @@ function TopicSidebar({ plan, currentTopicId }: { plan: TopicItem[]; currentTopi
 export default function InterviewPage() {
   const { id } = useParams<{ id: string }>() as { id: string }
   const navigate = useNavigate()
+  const location = useLocation()
   const chatHistory = useInterviewStore((s) => s.chatHistory)
   const currentTopicId = useInterviewStore((s) => s.currentTopicId)
   const routingFlag = useInterviewStore((s) => s.routingFlag)
@@ -120,11 +122,59 @@ export default function InterviewPage() {
     }
   }, [routingFlag, id, navigate, addToast])
 
-  // 定期同步后端状态
+  // 立即同步 + 定期同步后端状态
   useEffect(() => {
-    const timer = setInterval(refreshStatus, 5000)
+    refreshStatus(id)
+    const timer = setInterval(() => refreshStatus(id), 5000)
     return () => clearInterval(timer)
-  }, [refreshStatus])
+  }, [refreshStatus, id])
+
+  // 路由变化时重新同步（如从仲裁页面返回）
+  useEffect(() => {
+    refreshStatus(id)
+  }, [location.pathname, refreshStatus, id])
+
+  // 当 interviewId 存在时连接 SSE（非 startInterview 路径进入时）
+  useEffect(() => {
+    if (id && !sseClient.isConnected()) {
+      sseClient.connect(id)
+    }
+  }, [id])
+
+  // SSE 事件处理
+  useEffect(() => {
+    const handler = (event: SSEEvent) => {
+      if (event.type === 'message' && event.role === 'ai' && event.content) {
+        // SSE 推送的 AI 消息 — 去重后追加
+        useInterviewStore.setState((s) => {
+          const exists = s.chatHistory.some(
+            (m) => m.role === 'ai' && m.content === event.content,
+          )
+          if (exists) return {}
+          return {
+            chatHistory: [...s.chatHistory, { role: 'ai' as const, content: event.content!, topic_id: null }],
+            loading: false,
+            interviewPlan: event.topic_id
+              ? s.interviewPlan.map((t) =>
+                  t.topic_id === event.topic_id ? { ...t, status: 'completed' as const } : t,
+                )
+              : s.interviewPlan,
+          }
+        })
+      }
+      if (event.type === 'status' && event.flag) {
+        // 只在用户未干预时更新 routingFlag
+        useInterviewStore.setState((s) => {
+          if (s.routingFlag !== null) return {}
+          if (event.flag === 'ESCALATE') return { routingFlag: 'ESCALATE' as const }
+          if (event.flag === 'END') return { routingFlag: 'END' as const }
+          return {}
+        })
+      }
+    }
+    const unsub = sseClient.onEvent(handler)
+    return unsub
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -136,7 +186,7 @@ export default function InterviewPage() {
 
   const currentTopic = interviewPlan.find((t) => t.topic_id === currentTopicId)
   const completedCount = interviewPlan.filter((t) =>
-    (typeof t.status === 'string' ? t.status : (t as any).status) === 'completed'
+    t.status === 'completed'
   ).length
 
   return (

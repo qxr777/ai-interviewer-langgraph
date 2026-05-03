@@ -7,6 +7,7 @@ import type {
   InterviewReport,
 } from '../types/generated'
 import { api } from '../services/api'
+import { sseClient } from '../services/sse'
 
 interface InterviewState {
   interviewId: string | null
@@ -71,6 +72,8 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
         error: null,
         scoresByIndex: {},
       })
+      // 连接 SSE 用于实时推送
+      sseClient.connect(res.interview_id)
       return res.interview_id
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '启动失败'
@@ -99,11 +102,14 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
     try {
       const res = await api.submitAnswer(interviewId, { answer })
       if (res.ai_response) {
+        // SSE 可能已推送 AI 消息，去重：检查最后一条是否相同
+        const exists = get().chatHistory.some(
+          (m) => m.role === 'ai' && m.content === res.ai_response,
+        )
         set((s) => ({
-          chatHistory: [
-            ...s.chatHistory,
-            { role: 'ai' as const, content: res.ai_response!, topic_id: null },
-          ],
+          chatHistory: exists
+            ? s.chatHistory
+            : [...s.chatHistory, { role: 'ai' as const, content: res.ai_response!, topic_id: null }],
           scoresByIndex: res.scores?.length
             ? { ...s.scoresByIndex, [msgIdx]: res.scores }
             : s.scoresByIndex,
@@ -128,21 +134,34 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
     set({ routingFlag: action === 'END' ? 'END' : 'CONTINUE' })
   },
 
-  refreshStatus: async () => {
-    const { interviewId } = get()
-    if (!interviewId) return
-    const status = await api.getStatus(interviewId)
-    set({ routingFlag: status.routing_flag })
+  refreshStatus: async (overrideId?: string) => {
+    const { interviewId, chatHistory } = get()
+    const id = overrideId || interviewId
+    if (!id) return
+    const status = await api.getStatus(id)
+    set({
+      interviewId: id,
+      currentTopicId: status.current_topic_id ?? null,
+      currentTopicIndex: status.current_topic_index ?? 0,
+      // 只在 store 为空时从后端同步 chatHistory 和 plan
+      ...(chatHistory.length === 0 && status.chat_history
+        ? {
+            chatHistory: status.chat_history as ChatMessage[],
+            interviewPlan: (status.interview_plan || []) as TopicItem[],
+          }
+        : {}),
+    })
   },
 
-  refreshReport: async () => {
+  refreshReport: async (overrideId?: string) => {
     const { interviewId } = get()
-    if (!interviewId) return
-    const report = await api.getReport(interviewId) as InterviewReport
+    const id = overrideId || interviewId
+    if (!id) return
+    const report = await api.getReport(id) as InterviewReport
     set({ report })
   },
 
   addMessage: (msg) => set((s) => ({ chatHistory: [...s.chatHistory, msg] })),
-
   clearError: () => set({ error: null }),
+  disconnectSSE: () => sseClient.disconnect(),
 }))

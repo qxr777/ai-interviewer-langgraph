@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useInterviewStore } from '../stores/interviewStore'
 import { useUIStore } from '../stores/uiStore'
+import { sseClient } from '../services/sse'
 import type { EvaluationRecord } from '../types/generated'
 
 export default function ArbitrationPage() {
@@ -13,6 +15,10 @@ export default function ArbitrationPage() {
   const scoresByIndex = useInterviewStore((s) => s.scoresByIndex)
   const addToast = useUIStore((s) => s.addToast)
 
+  useEffect(() => {
+    return () => { sseClient.disconnect() }
+  }, [])
+
   const currentTopic = interviewPlan.find((t) => t.topic_id === currentTopicId)
   const lastAiMessage = [...chatHistory].reverse().find((m) => m.role === 'ai')
   const lastCandidateMsgIdx = [...chatHistory].reverse().findIndex((m) => m.role === 'candidate')
@@ -23,7 +29,7 @@ export default function ArbitrationPage() {
   const handleAction = async (action: 'CONTINUE' | 'SKIP' | 'END') => {
     await arbitrate(action)
     addToast(`已执行: ${action}`, 'success')
-
+    // Navigate after store has been updated
     if (action === 'END') {
       navigate(`/report/${id}`)
     } else {

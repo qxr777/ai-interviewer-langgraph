@@ -1,7 +1,8 @@
 """InterviewState 数据模型和路由状态枚举。"""
 
+import operator
 from enum import Enum
-from typing import Any
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
@@ -39,10 +40,10 @@ class InterviewState(BaseModel):
     """全局共享的状态对象。"""
     candidate_info: dict[str, Any]
     interview_plan: list[TopicItem] = Field(default_factory=list)
-    chat_history: list[ChatMessage] = Field(default_factory=list)
+    chat_history: Annotated[list[ChatMessage], operator.add] = Field(default_factory=list)
     current_topic_id: str | None = None
     current_topic_index: int = 0
-    evaluation_records: list[EvaluationRecord] = Field(default_factory=list)
+    evaluation_records: Annotated[list[EvaluationRecord], operator.add] = Field(default_factory=list)
     routing_flag: RoutingFlag
 
     # 报告（由 REPORTING 节点写入）

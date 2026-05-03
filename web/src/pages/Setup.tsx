@@ -44,8 +44,9 @@ export default function SetupPage() {
         const id = await startInterview(base64, jd.trim())
         addToast('面试已启动', 'success')
         navigate(`/interview/${id}`)
-      } catch {
-        addToast('面试启动失败', 'error')
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '未知错误'
+        addToast(`面试启动失败: ${msg}`, 'error')
       }
     }
     reader.onerror = () => addToast('文件读取失败', 'error')

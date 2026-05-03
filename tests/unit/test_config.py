@@ -39,12 +39,26 @@ class TestConfigLoading:
 
     def test_env_override(self):
         """环境变量优先级高于 config.yaml。"""
-        load_config = _get_load_config()
-        with tempfile.TemporaryDirectory() as tmpdir:
-            env_path = Path(tmpdir) / ".env"
-            env_path.write_text("LLM_MODEL=qwen-plus\n")
-            config = load_config(project_root=tmpdir)
-            assert config["llm_model"] == "qwen-plus"
+        # 使用子进程隔离，避免父进程已加载项目 .env 干扰
+        code = """
+import sys, tempfile
+from pathlib import Path
+sys.path.insert(0, '.')
+from src.config import load_config
+with tempfile.TemporaryDirectory() as tmpdir:
+    env_path = Path(tmpdir) / '.env'
+    env_path.write_text('LLM_MODEL=qwen-plus\\n')
+    config = load_config(project_root=tmpdir)
+    print('model:', config['llm_model'])
+"""
+        env = {k: v for k, v in os.environ.items() if k not in ("LLM_MODEL", "LLM_API_KEY", "LLM_API_BASE", "DEBUG")}
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True, text=True,
+            cwd=str(Path(__file__).parent.parent.parent),
+            env=env,
+        )
+        assert "model: qwen-plus" in result.stdout, f"stdout: {result.stdout}, stderr: {result.stderr}"
 
     def test_debug_bool_casting(self):
         """DEBUG=true 应解析为布尔值。"""

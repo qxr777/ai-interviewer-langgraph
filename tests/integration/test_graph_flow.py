@@ -3,16 +3,16 @@
 覆盖：正常路径（3 议题→报告）、重试路径（中置信度→CoT 重试）、熔断路径（σ>15→人工仲裁）。
 """
 
-import pytest
-
 
 def _get_graph():
     from src.graph.builder import build_interview_graph
+
     return build_interview_graph
 
 
 def _get_state_model():
     from src.state import InterviewState
+
     return InterviewState
 
 
@@ -30,10 +30,7 @@ def _run_graph(graph, initial_state, thread_id="test", max_cycles=20):
         if result.get("report") is not None:
             return result
         plan = result.get("interview_plan", [])
-        all_done = all(
-            (t["status"] == "completed" if isinstance(t, dict) else t.status == "completed")
-            for t in plan
-        )
+        all_done = all((t["status"] == "completed" if isinstance(t, dict) else t.status == "completed") for t in plan)
         if all_done:
             return result
         state = result
@@ -46,10 +43,10 @@ class TestGraphNormalFlow:
     def test_full_interview_flow(self, candidate_info_clean, job_description):
         """空状态启动 → 经历议题 → 输出面试报告 JSON。"""
         build_interview_graph = _get_graph()
-        InterviewState = _get_state_model()
+        interview_state_model = _get_state_model()
 
         graph = build_interview_graph(llm_model="mock")
-        initial_state = InterviewState(
+        initial_state = interview_state_model(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
@@ -63,10 +60,10 @@ class TestGraphNormalFlow:
     def test_all_topics_completed(self, candidate_info_clean, job_description):
         """正常路径下所有议题应标记为 completed。"""
         build_interview_graph = _get_graph()
-        InterviewState = _get_state_model()
+        interview_state_model = _get_state_model()
 
         graph = build_interview_graph(llm_model="mock")
-        initial_state = InterviewState(
+        initial_state = interview_state_model(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
@@ -81,10 +78,10 @@ class TestGraphNormalFlow:
     def test_report_has_scores(self, candidate_info_clean, job_description):
         """报告中应包含各议题的评分。"""
         build_interview_graph = _get_graph()
-        InterviewState = _get_state_model()
+        interview_state_model = _get_state_model()
 
         graph = build_interview_graph(llm_model="mock")
-        initial_state = InterviewState(
+        initial_state = interview_state_model(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
@@ -105,13 +102,13 @@ class TestGraphRetryFlow:
     def test_medium_confidence_triggers_retry(self, candidate_info_clean, job_description):
         """模拟 σ 在中等区间 → 触发 CoT 重试 → 重试后应继续。"""
         build_interview_graph = _get_graph()
-        InterviewState = _get_state_model()
+        interview_state_model = _get_state_model()
 
         graph = build_interview_graph(
             llm_model="mock",
             mock_sigma=10.0,  # 中置信度
         )
-        initial_state = InterviewState(
+        initial_state = interview_state_model(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
@@ -127,14 +124,14 @@ class TestGraphEscalationFlow:
     def test_low_confidence_triggers_escalation(self, candidate_info_clean, job_description):
         """模拟 σ > 15 → 图挂起到 Human_Supervisor → 人工输入后恢复。"""
         build_interview_graph = _get_graph()
-        InterviewState = _get_state_model()
+        interview_state_model = _get_state_model()
 
         graph = build_interview_graph(
             llm_model="mock",
             mock_sigma=20.0,  # 低置信度
             supervisor_mock_input="END",
         )
-        initial_state = InterviewState(
+        initial_state = interview_state_model(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )

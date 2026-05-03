@@ -46,8 +46,9 @@ class JsonlFormatter(logging.Formatter):
         return json.dumps(log_entry, ensure_ascii=False)
 
 
-def log_node_execution(logger: logging.Logger, node: str, input_summary: str,
-                       output_summary: str, duration: float, token_usage: int = 0):
+def log_node_execution(
+    logger: logging.Logger, node: str, input_summary: str, output_summary: str, duration: float, token_usage: int = 0
+):
     """记录节点执行日志。"""
     logger.info(
         "node executed",

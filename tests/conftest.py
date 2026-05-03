@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
@@ -14,6 +13,7 @@ def reset_global_counters():
     """每个测试前重置全局计数器。"""
     try:
         from src.graph.builder import _counters
+
         _counters.retry_counts.clear()
         _counters.global_round_count = 0
         _counters.consecutive_medium = 0
@@ -63,9 +63,26 @@ def mock_interview_plan():
 def mock_evaluation_scores():
     """模拟 3 个评估官的评分。"""
     return [
-        {"score": 82, "topic_id": "topic_1", "rationale": "候选人展示了扎实的 Python 基础，能够清晰解释装饰器的工作原理，并在回答中提到了实际项目中的应用场景。整体表现良好。"},
-        {"score": 78, "topic_id": "topic_1", "rationale": "回答内容基本正确，对装饰器的理解到位，但在高级特性如参数化装饰器方面略有欠缺。总体表现合格。"},
-        {"score": 85, "topic_id": "topic_1", "rationale": "候选人对 Python 装饰器有深入理解，不仅回答了基础概念，还主动提到了 functools.wraps 的细节，表现优秀。"},
+        {
+            "score": 82,
+            "topic_id": "topic_1",
+            "rationale": (
+                "候选人展示了扎实的 Python 基础，能够清晰解释装饰器的工作原理，"
+                "并在回答中提到了实际项目中的应用场景。整体表现良好。"
+            ),
+        },
+        {
+            "score": 78,
+            "topic_id": "topic_1",
+            "rationale": "回答内容基本正确，对装饰器的理解到位，但在高级特性如参数化装饰器方面略有欠缺。总体表现合格。",
+        },
+        {
+            "score": 85,
+            "topic_id": "topic_1",
+            "rationale": (
+                "候选人对 Python 装饰器有深入理解，不仅回答了基础概念，还主动提到了 functools.wraps 的细节，表现优秀。"
+            ),
+        },
     ]
 
 

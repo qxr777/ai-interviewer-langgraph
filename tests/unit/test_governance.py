@@ -3,16 +3,17 @@
 覆盖：σ 计算正确性、三区间判定、4 个计数器递增/重置、连续 3 次中置信熔断。
 """
 
-import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 
 def _get_governance():
     from src.graph.governance import (
+        ConfidenceLevel,
         calculate_std,
         evaluate_confidence,
-        ConfidenceLevel,
     )
+
     return calculate_std, evaluate_confidence, ConfidenceLevel
 
 
@@ -75,7 +76,6 @@ class TestConfidenceLevel:
 
     def test_boundary_sigma_5(self):
         """σ=5.0 → 边界仍为高置信度。"""
-        calculate_std = _get_governance()[0]
         evaluate_confidence = _get_governance()[1]
         # 构造 σ ≈ 5.0 的分数
         scores = [75, 80, 85]  # σ ≈ 4.08
@@ -97,6 +97,7 @@ class TestCounters:
     def test_retry_count_per_topic(self):
         """retry_count 按议题独立。"""
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         counters.increment_retry("topic_1")
         assert counters.get_retry_count("topic_1") == 1
@@ -105,6 +106,7 @@ class TestCounters:
     def test_retry_count_reset_on_new_topic(self):
         """新议题开始时 retry_count 归零。"""
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         counters.increment_retry("topic_1")
         counters.increment_retry("topic_1")
@@ -114,6 +116,7 @@ class TestCounters:
     def test_global_round_count(self):
         """global_round_count 不复位。"""
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         for _ in range(5):
             counters.increment_global_round()
@@ -122,6 +125,7 @@ class TestCounters:
     def test_consecutive_medium_reset_on_high(self):
         """高置信度时 consecutive_medium 归零。"""
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         counters.increment_consecutive_medium()
         counters.increment_consecutive_medium()
@@ -131,6 +135,7 @@ class TestCounters:
     def test_consecutive_medium_trigger_escallate(self):
         """连续 3 次中置信度 → 应触发 ESCALATE。"""
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         for _ in range(3):
             counters.increment_consecutive_medium()

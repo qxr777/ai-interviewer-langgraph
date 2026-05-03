@@ -3,11 +3,10 @@
 覆盖：σ ≤ 5 → CONTINUE、σ = 10 → RETRY、σ = 20 → ESCALATE、无更多议题 → END。
 """
 
-import pytest
-
 
 def _get_router():
-    from src.graph.router import route_next_node, RoutingDecision
+    from src.graph.router import RoutingDecision, route_next_node
+
     return route_next_node, RoutingDecision
 
 
@@ -18,6 +17,7 @@ class TestRouterBasic:
         """σ=3（高置信度）→ 流转至 Questioner。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
 
         decision = route_next_node(
@@ -33,6 +33,7 @@ class TestRouterBasic:
         """σ=10（中置信度），retry_count=0 → RETRY（CoT 重试）。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
 
         decision = route_next_node(
@@ -48,6 +49,7 @@ class TestRouterBasic:
         """σ=20（低置信度）→ ESCALATE。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
 
         decision = route_next_node(
@@ -63,6 +65,7 @@ class TestRouterBasic:
         """无更多待完成议题 → REPORTING。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
 
         completed_plan = [
@@ -87,6 +90,7 @@ class TestRouterRetry:
         """retry_count ≥ 3 → 跳过当前议题。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         counters.retry_counts["topic_1"] = 3
 
@@ -108,6 +112,7 @@ class TestRouterGlobalLimits:
         """global_round_count ≥ 30 → REPORTING。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         counters.global_round_count = 30
 
@@ -124,6 +129,7 @@ class TestRouterGlobalLimits:
         """连续 3 次中置信度 → ESCALATE。"""
         route_next_node = _get_router()[0]
         from src.graph.governance import GovernanceCounters
+
         counters = GovernanceCounters()
         counters.consecutive_medium = 3
 

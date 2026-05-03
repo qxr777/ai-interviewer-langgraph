@@ -17,11 +17,11 @@ class NodeHumanSupervisor:
             action = self.mock_input
         else:
             topic_name = self._get_topic_name(state)
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print("⚠  系统已挂起，等待人工仲裁")
             print(f"当前议题: {topic_name}")
             print("操作: CONTINUE (继续) / SKIP (跳过) / END (结束)")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             action = input("请输入操作指令: ").strip().upper()
 
         if action == "CONTINUE":

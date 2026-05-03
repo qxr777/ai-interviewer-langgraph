@@ -38,6 +38,7 @@ class NodePlanner:
         from langchain_openai import ChatOpenAI
 
         from src.config import load_config
+
         config = load_config()
 
         llm = ChatOpenAI(
@@ -55,9 +56,11 @@ class NodePlanner:
             try:
                 items = json.loads(match.group())
                 return [
-                    {"topic_id": item.get("topic_id", f"topic_{i+1}"),
-                     "topic_name": item.get("topic_name", ""),
-                     "status": "pending"}
+                    {
+                        "topic_id": item.get("topic_id", f"topic_{i + 1}"),
+                        "topic_name": item.get("topic_name", ""),
+                        "status": "pending",
+                    }
                     for i, item in enumerate(items)
                 ]
             except json.JSONDecodeError:

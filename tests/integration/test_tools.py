@@ -3,15 +3,14 @@
 覆盖：简历解析 → 大纲生成 → 提问 → 评分全链路。
 """
 
-import pytest
-
 
 def _get_full_pipeline():
-    from src.tools.resume_parser import parse_resume_document
+    from src.agents.evaluator import NodeParallelEvaluator
     from src.agents.planner import NodePlanner
     from src.agents.questioner import NodeQuestioner
-    from src.agents.evaluator import NodeParallelEvaluator
     from src.tools.evaluation import submit_evaluation
+    from src.tools.resume_parser import parse_resume_document
+
     return parse_resume_document, NodePlanner, NodeQuestioner, NodeParallelEvaluator, submit_evaluation
 
 
@@ -20,7 +19,7 @@ class TestToolchainEndToEnd:
 
     def test_parse_to_plan(self, mock_resume_path, job_description):
         """简历解析 → 生成大纲。"""
-        parse_resume_document, NodePlanner, _, _, _ = _get_full_pipeline()
+        parse_resume_document, node_planner, _, _, _ = _get_full_pipeline()
         from src.state import InterviewState
 
         parsed = parse_resume_document(mock_resume_path)
@@ -34,7 +33,7 @@ class TestToolchainEndToEnd:
             candidate_info=parsed,
             routing_flag="CONTINUE",
         )
-        planner = NodePlanner(llm_model="mock", job_description=job_description)
+        planner = node_planner(llm_model="mock", job_description=job_description)
         result = planner(state)
 
         assert "interview_plan" in result
@@ -42,7 +41,7 @@ class TestToolchainEndToEnd:
 
     def test_question_to_evaluation(self, job_description):
         """提问 → 候选人回答 → 评估打分。"""
-        _, NodePlanner, NodeQuestioner, NodeParallelEvaluator, submit_evaluation = _get_full_pipeline()
+        _, node_planner, node_questioner, node_parallel_evaluator, submit_evaluation = _get_full_pipeline()
         from src.state import InterviewState
 
         candidate_info = {
@@ -55,7 +54,7 @@ class TestToolchainEndToEnd:
             candidate_info=candidate_info,
             routing_flag="CONTINUE",
         )
-        planner = NodePlanner(llm_model="mock", job_description=job_description)
+        planner = node_planner(llm_model="mock", job_description=job_description)
         plan_result = planner(state)
 
         first_topic = plan_result["interview_plan"][0]
@@ -73,7 +72,7 @@ class TestToolchainEndToEnd:
         state = InterviewState(**state_dict)
 
         # Questioner 提问 + mock 候选人回答
-        questioner = NodeQuestioner(llm_model="mock")
+        questioner = node_questioner(llm_model="mock")
         q_result = questioner(state)
         state = InterviewState(
             candidate_info=state.candidate_info,
@@ -86,7 +85,7 @@ class TestToolchainEndToEnd:
         )
 
         # Evaluator 评分
-        evaluator = NodeParallelEvaluator(llm_model="mock", evaluator_count=3)
+        evaluator = node_parallel_evaluator(llm_model="mock", evaluator_count=3)
         e_result = evaluator(state)
 
         assert len(e_result["evaluation_records"]) == 3
@@ -101,6 +100,6 @@ class TestToolchainEndToEnd:
         result = submit_eval(
             score=85,
             topic_id="topic_1",
-            rationale="候选人在该议题上展示了扎实的基础知识和丰富的实践经验，回答准确且条理清晰，体现了较强的专业能力和深入的技术理解。"
+            rationale="候选人在该议题上展示了扎实的基础知识和丰富的实践经验，回答准确且条理清晰，体现了较强的专业能力和深入的技术理解。",
         )
         assert result["score"] == 85

@@ -52,23 +52,27 @@ def generate_report(evaluation_records: list[dict], interview_plan: list[dict]) 
         if tid in topic_scores:
             scores = topic_scores[tid]
             avg = sum(scores) / len(scores)
-            topics.append({
-                "topic_id": tid,
-                "topic_name": topic["topic_name"],
-                "status": topic.get("status", "completed"),
-                "average_score": round(avg, 2),
-                "scores": scores,
-                "rationales": topic_rationales.get(tid, []),
-            })
+            topics.append(
+                {
+                    "topic_id": tid,
+                    "topic_name": topic["topic_name"],
+                    "status": topic.get("status", "completed"),
+                    "average_score": round(avg, 2),
+                    "scores": scores,
+                    "rationales": topic_rationales.get(tid, []),
+                }
+            )
         else:
-            topics.append({
-                "topic_id": tid,
-                "topic_name": topic["topic_name"],
-                "status": topic.get("status", "pending"),
-                "average_score": None,
-                "scores": [],
-                "rationales": [],
-            })
+            topics.append(
+                {
+                    "topic_id": tid,
+                    "topic_name": topic["topic_name"],
+                    "status": topic.get("status", "pending"),
+                    "average_score": None,
+                    "scores": [],
+                    "rationales": [],
+                }
+            )
 
     overall_scores = [t["average_score"] for t in topics if t["average_score"] is not None]
     overall_avg = sum(overall_scores) / len(overall_scores) if overall_scores else None
@@ -117,8 +121,10 @@ def _advance_topic(state: InterviewState) -> tuple[dict, str]:
 
 def _make_pause_node():
     """Pause 节点：无出边，图在此停止，等待用户回答后再次 invoke。"""
+
     def node(state):
         return {}
+
     return node
 
 
@@ -204,6 +210,7 @@ def _make_planner_node(planner):
             result["current_topic_index"] = 0
             _counters.set_current_topic(tid)
         return result
+
     return node
 
 
@@ -212,6 +219,7 @@ def _make_questioner_node(questioner):
         s = _to_state(state)
         _counters.increment_global_round()
         return questioner(s)
+
     return node
 
 
@@ -219,6 +227,7 @@ def _make_evaluator_node(evaluator):
     def node(state):
         s = _to_state(state)
         return evaluator(s)
+
     return node
 
 
@@ -228,19 +237,27 @@ def _make_supervisor_node(supervisor):
         result = supervisor(s)
         # 强制返回 Command，确保状态更新生效
         from src.state import RoutingFlag
+
         if result.get("routing_flag") == RoutingFlag.END:
-            return Command(goto="router", update={
-                "routing_flag": RoutingFlag.END,
-                "human_intervened": True,
-            })
+            return Command(
+                goto="router",
+                update={
+                    "routing_flag": RoutingFlag.END,
+                    "human_intervened": True,
+                },
+            )
         elif result.get("routing_flag") == RoutingFlag.CONTINUE:
-            return Command(goto="router", update={
-                "routing_flag": RoutingFlag.CONTINUE,
-                "human_intervened": True,
-                "current_topic_id": result.get("current_topic_id"),
-                "current_topic_index": result.get("current_topic_index"),
-            })
+            return Command(
+                goto="router",
+                update={
+                    "routing_flag": RoutingFlag.CONTINUE,
+                    "human_intervened": True,
+                    "current_topic_id": result.get("current_topic_id"),
+                    "current_topic_index": result.get("current_topic_index"),
+                },
+            )
         return Command(goto="router", update=result)
+
     return node
 
 
@@ -258,6 +275,7 @@ def _make_reporting_node():
         plan_dicts = [_to_dict(t) for t in s.interview_plan]
         report = generate_report(records, plan_dicts)
         return {"report": report, "routing_flag": RoutingFlag.END}
+
     return node
 
 
@@ -325,6 +343,7 @@ def _make_router_node(mock_sigma: float | None = None, force_consecutive_medium:
             updates["next_node"] = "reporting"
 
         return updates
+
     return node
 
 

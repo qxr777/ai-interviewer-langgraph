@@ -8,6 +8,7 @@ import pytest
 
 def _get_parse_resume_document():
     from src.tools.resume_parser import parse_resume_document
+
     return parse_resume_document
 
 
@@ -35,14 +36,14 @@ class TestParseResumeInvalid:
 
     def test_nonexistent_file(self):
         parse_resume_document = _get_parse_resume_document()
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError):
             parse_resume_document("/nonexistent/path/resume.pdf")
 
     def test_empty_file(self, tmp_path):
         empty_file = tmp_path / "empty.pdf"
         empty_file.write_bytes(b"")
         parse_resume_document = _get_parse_resume_document()
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             parse_resume_document(str(empty_file))
 
 
@@ -54,6 +55,7 @@ class TestParseResumeWord:
         # 创建最小 docx 文件
         try:
             from docx import Document
+
             doc = Document()
             doc.add_paragraph("张三 - Python 开发工程师")
             doc.add_paragraph("技能：Python, FastAPI, PostgreSQL")

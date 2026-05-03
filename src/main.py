@@ -19,11 +19,15 @@ def main():
     config = load_config()
 
     # 解析简历
-    candidate_info = _parse_resume(args.resume) if args.resume else {
-        "name": "匿名候选人",
-        "skills": ["Python", "FastAPI", "PostgreSQL"],
-        "experience_years": 5,
-    }
+    candidate_info = (
+        _parse_resume(args.resume)
+        if args.resume
+        else {
+            "name": "匿名候选人",
+            "skills": ["Python", "FastAPI", "PostgreSQL"],
+            "experience_years": 5,
+        }
+    )
 
     job_description = args.jd or "Senior Python Developer"
 
@@ -42,22 +46,23 @@ def main():
         routing_flag=RoutingFlag.CONTINUE,
     )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("🚀 AI 智能面试官启动")
     print(f"候选人: {candidate_info.get('name', '未知')}")
     print(f"岗位: {job_description}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # 执行图
     import uuid
+
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
     result = graph.invoke(initial_state, config)
 
     # 输出报告
     if result.get("report"):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print("📋 面试报告")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print(json.dumps(result["report"], ensure_ascii=False, indent=2))
     else:
         print("\n面试结束，未生成报告。")
@@ -67,6 +72,7 @@ def _parse_resume(resume_path: str | None) -> dict:
     if not resume_path:
         return {}
     from src.tools.resume_parser import parse_resume_document
+
     try:
         return parse_resume_document(resume_path)
     except Exception as e:

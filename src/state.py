@@ -1,14 +1,15 @@
 """InterviewState 数据模型和路由状态枚举。"""
 
 import operator
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 
 
-class RoutingFlag(str, Enum):
+class RoutingFlag(StrEnum):
     """决定图流转方向的全局信号灯。"""
+
     CONTINUE = "CONTINUE"
     RETRY = "RETRY"
     ESCALATE = "ESCALATE"
@@ -17,6 +18,7 @@ class RoutingFlag(str, Enum):
 
 class TopicItem(BaseModel):
     """面试议题。"""
+
     topic_id: str
     topic_name: str
     status: str = "pending"  # pending / in_progress / completed
@@ -24,6 +26,7 @@ class TopicItem(BaseModel):
 
 class ChatMessage(BaseModel):
     """对话消息。"""
+
     role: str  # system / ai / candidate
     content: str
     topic_id: str | None = None
@@ -31,6 +34,7 @@ class ChatMessage(BaseModel):
 
 class EvaluationRecord(BaseModel):
     """评估记录。"""
+
     score: int = Field(ge=1, le=100)
     topic_id: str
     rationale: str
@@ -38,6 +42,7 @@ class EvaluationRecord(BaseModel):
 
 class InterviewState(BaseModel):
     """全局共享的状态对象。"""
+
     candidate_info: dict[str, Any]
     interview_plan: list[TopicItem] = Field(default_factory=list)
     chat_history: Annotated[list[ChatMessage], operator.add] = Field(default_factory=list)

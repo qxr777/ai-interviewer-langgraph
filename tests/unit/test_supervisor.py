@@ -3,11 +3,10 @@
 覆盖：CONTINUE/SKIP/END 输入对应状态转换。
 """
 
-import pytest
-
 
 def _get_supervisor():
     from src.agents.supervisor import NodeHumanSupervisor
+
     return NodeHumanSupervisor
 
 
@@ -16,23 +15,25 @@ class TestNodeHumanSupervisor:
 
     def test_continue_input(self):
         """输入 CONTINUE → routing_flag 设为 CONTINUE。"""
-        NodeHumanSupervisor = _get_supervisor()
+        node_human_supervisor = _get_supervisor()
         from src.state import InterviewState
+
         state = InterviewState(
             candidate_info={"name": "Test", "skills": []},
             routing_flag="ESCALATE",
             current_topic_id="topic_1",
         )
 
-        supervisor = NodeHumanSupervisor(mock_input="CONTINUE")
+        supervisor = node_human_supervisor(mock_input="CONTINUE")
         result = supervisor(state)
 
         assert result.get("routing_flag") == "CONTINUE"
 
     def test_skip_input(self):
         """输入 SKIP → routing_flag 设为 CONTINUE，current_topic_index +1。"""
-        NodeHumanSupervisor = _get_supervisor()
+        node_human_supervisor = _get_supervisor()
         from src.state import InterviewState
+
         state = InterviewState(
             candidate_info={"name": "Test", "skills": []},
             interview_plan=[
@@ -44,7 +45,7 @@ class TestNodeHumanSupervisor:
             routing_flag="ESCALATE",
         )
 
-        supervisor = NodeHumanSupervisor(mock_input="SKIP")
+        supervisor = node_human_supervisor(mock_input="SKIP")
         result = supervisor(state)
 
         assert result.get("current_topic_index") == 1
@@ -52,15 +53,16 @@ class TestNodeHumanSupervisor:
 
     def test_end_input(self):
         """输入 END → routing_flag 设为 END。"""
-        NodeHumanSupervisor = _get_supervisor()
+        node_human_supervisor = _get_supervisor()
         from src.state import InterviewState
+
         state = InterviewState(
             candidate_info={"name": "Test", "skills": []},
             routing_flag="ESCALATE",
             current_topic_id="topic_1",
         )
 
-        supervisor = NodeHumanSupervisor(mock_input="END")
+        supervisor = node_human_supervisor(mock_input="END")
         result = supervisor(state)
 
         assert result.get("routing_flag") == "END"

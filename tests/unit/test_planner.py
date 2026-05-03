@@ -3,12 +3,11 @@
 覆盖：mock LLM → 验证议题数 3-5、字段完整性、status=pending。
 """
 
-import pytest
-
 
 def _get_planner():
-    from src.agents.planner import NodePlanner
-    return NodePlanner
+    from src.agents.planner import node_planner
+
+    return node_planner
 
 
 class TestNodePlanner:
@@ -16,14 +15,15 @@ class TestNodePlanner:
 
     def test_generates_topics(self, candidate_info_clean, job_description):
         """输入简历和 JD → 输出 3-5 个议题。"""
-        NodePlanner = _get_planner()
+        node_planner = _get_planner()
         from src.state import InterviewState
+
         state = InterviewState(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
 
-        planner = NodePlanner(llm_model="mock", job_description=job_description)
+        planner = node_planner(llm_model="mock", job_description=job_description)
         result = planner(state)
 
         assert "interview_plan" in result
@@ -32,14 +32,15 @@ class TestNodePlanner:
 
     def test_topic_fields_complete(self, candidate_info_clean, job_description):
         """每个议题含 topic_id、topic_name、status=pending。"""
-        NodePlanner = _get_planner()
+        node_planner = _get_planner()
         from src.state import InterviewState
+
         state = InterviewState(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
 
-        planner = NodePlanner(llm_model="mock", job_description=job_description)
+        planner = node_planner(llm_model="mock", job_description=job_description)
         result = planner(state)
 
         for topic in result["interview_plan"]:
@@ -49,14 +50,15 @@ class TestNodePlanner:
 
     def test_planner_does_not_modify_candidate_info(self, candidate_info_clean, job_description):
         """Planner 不应修改候选人信息。"""
-        NodePlanner = _get_planner()
+        node_planner = _get_planner()
         from src.state import InterviewState
+
         state = InterviewState(
             candidate_info=candidate_info_clean,
             routing_flag="CONTINUE",
         )
 
-        planner = NodePlanner(llm_model="mock", job_description=job_description)
+        planner = node_planner(llm_model="mock", job_description=job_description)
         result = planner(state)
 
         assert "candidate_info" not in result

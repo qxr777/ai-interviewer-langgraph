@@ -1,11 +1,11 @@
 """路由模块：σ 分析 → CONTINUE/RETRY/ESCALATE/END 决策。"""
 
-from enum import Enum
+from enum import StrEnum
 
 from src.graph.governance import GovernanceCounters
 
 
-class RoutingDecision(str, Enum):
+class RoutingDecision(StrEnum):
     QUESTIONER = "QUESTIONER"
     EVALUATOR = "EVALUATOR"
     SUPERVISOR = "ESCALATE"

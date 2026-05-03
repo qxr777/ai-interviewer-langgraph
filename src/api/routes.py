@@ -5,10 +5,6 @@ import base64
 import os
 import tempfile
 import uuid
-import base64
-import os
-import tempfile
-import uuid
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -55,12 +51,12 @@ async def start_interview(req: StartInterviewRequest):
     from src.tools.resume_parser import parse_resume_document
 
     # Detect file type from magic bytes
-    if file_bytes[:2] == b'PK':
-        suffix = '.docx'
-    elif file_bytes[:4] == b'%PDF':
-        suffix = '.pdf'
+    if file_bytes[:2] == b"PK":
+        suffix = ".docx"
+    elif file_bytes[:4] == b"%PDF":
+        suffix = ".pdf"
     else:
-        suffix = '.docx'  # fallback
+        suffix = ".docx"  # fallback
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(file_bytes)
@@ -86,6 +82,7 @@ async def start_interview(req: StartInterviewRequest):
 
     # Step 1: Run planner to create topics
     from src.agents.planner import NodePlanner
+
     planner = NodePlanner(
         llm_model="mock" if use_mock else config.get("llm_model", "deepseek-chat"),
         job_description=req.job_description,
@@ -103,6 +100,7 @@ async def start_interview(req: StartInterviewRequest):
 
     # Step 2: Run questioner only (no evaluation yet)
     from src.agents.questioner import NodeQuestioner
+
     questioner = NodeQuestioner(
         llm_model="mock" if use_mock else config.get("llm_model", "deepseek-chat"),
         use_mock=use_mock,
@@ -147,10 +145,7 @@ async def start_interview(req: StartInterviewRequest):
         "interview_id": interview_id,
         "status": "started",
         "ai_response": ai_message,
-        "interview_plan": [
-            t.model_dump() if hasattr(t, "model_dump") else t
-            for t in started_state.interview_plan
-        ],
+        "interview_plan": [t.model_dump() if hasattr(t, "model_dump") else t for t in started_state.interview_plan],
         "current_topic_id": started_state.current_topic_id,
     }
 
@@ -165,6 +160,7 @@ async def submit_answer(interview_id: str, req: AnswerRequest):
     graph = session["graph"]
 
     from src.state import ChatMessage
+
     new_msg = ChatMessage(
         role="candidate",
         content=req.answer,
@@ -197,11 +193,14 @@ async def submit_answer(interview_id: str, req: AnswerRequest):
                     content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", None)
                     if role == "ai" and content:
                         ai_message = content
-                        await _push_event(interview_id, {
-                            "type": "message",
-                            "role": "ai",
-                            "content": content,
-                        })
+                        await _push_event(
+                            interview_id,
+                            {
+                                "type": "message",
+                                "role": "ai",
+                                "content": content,
+                            },
+                        )
             elif node_name == "router" and isinstance(update, dict):
                 next_node = update.get("next_node", "")
                 flag_map = {
@@ -253,10 +252,7 @@ async def submit_answer(interview_id: str, req: AnswerRequest):
     return {
         "ai_response": ai_message,
         "scores": scores,
-        "interview_plan": [
-            t.model_dump() if hasattr(t, "model_dump") else t
-            for t in updated.interview_plan
-        ],
+        "interview_plan": [t.model_dump() if hasattr(t, "model_dump") else t for t in updated.interview_plan],
         "current_topic_id": updated.current_topic_id,
         "routing_flag": routing_flag,
         "status": "ok",

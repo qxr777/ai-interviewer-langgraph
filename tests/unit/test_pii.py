@@ -3,11 +3,10 @@
 覆盖：手机号、身份证号、地址脱敏；无 PII 不变；混合文本；边界值。
 """
 
-import pytest
-
 
 def _redact_pii():
     from src.utils.pii import redact_pii
+
     return redact_pii
 
 

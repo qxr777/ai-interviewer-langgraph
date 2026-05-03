@@ -1,10 +1,10 @@
 """治理模块：标准差计算、置信度区间判定、计数器生命周期。"""
 
 import math
-from enum import Enum
+from enum import StrEnum
 
 
-class ConfidenceLevel(str, Enum):
+class ConfidenceLevel(StrEnum):
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"

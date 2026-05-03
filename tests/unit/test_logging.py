@@ -4,14 +4,13 @@
 """
 
 import json
-import logging
 import os
 import tempfile
-import pytest
 
 
 def _get_structured_logger():
     from src.utils.logging import get_structured_logger, log_node_execution
+
     return get_structured_logger, log_node_execution
 
 
@@ -24,9 +23,12 @@ class TestStructuredLogging:
         with tempfile.TemporaryDirectory() as tmpdir:
             logger = get_structured_logger(log_dir=tmpdir)
             log_node_execution(
-                logger, node="planner",
-                input_summary="test", output_summary="test",
-                duration=0.1, token_usage=100,
+                logger,
+                node="planner",
+                input_summary="test",
+                output_summary="test",
+                duration=0.1,
+                token_usage=100,
             )
 
             files = [f for f in os.listdir(tmpdir) if f.endswith(".jsonl")]
@@ -38,9 +40,12 @@ class TestStructuredLogging:
         with tempfile.TemporaryDirectory() as tmpdir:
             logger = get_structured_logger(log_dir=tmpdir)
             log_node_execution(
-                logger, node="questioner",
-                input_summary="input", output_summary="output",
-                duration=1.5, token_usage=200,
+                logger,
+                node="questioner",
+                input_summary="input",
+                output_summary="output",
+                duration=1.5,
+                token_usage=200,
             )
 
             files = [f for f in os.listdir(tmpdir) if f.endswith(".jsonl")]
@@ -56,9 +61,12 @@ class TestStructuredLogging:
         with tempfile.TemporaryDirectory() as tmpdir:
             logger = get_structured_logger(log_dir=tmpdir)
             log_node_execution(
-                logger, node="evaluator",
-                input_summary="ans", output_summary="score:80",
-                duration=2.0, token_usage=300,
+                logger,
+                node="evaluator",
+                input_summary="ans",
+                output_summary="score:80",
+                duration=2.0,
+                token_usage=300,
             )
 
             files = [f for f in os.listdir(tmpdir) if f.endswith(".jsonl")]

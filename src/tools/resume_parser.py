@@ -52,6 +52,7 @@ def _extract_pdf(path: Path) -> str:
     """从 PDF 提取文本。"""
     try:
         from PyPDF2 import PdfReader
+
         reader = PdfReader(str(path))
         text = ""
         for page in reader.pages:
@@ -61,6 +62,7 @@ def _extract_pdf(path: Path) -> str:
         # 如果没有 PyPDF2，尝试用 pypdf
         try:
             from pypdf import PdfReader  # type: ignore[assignment]
+
             reader = PdfReader(str(path))
             text = ""
             for page in reader.pages:
@@ -74,6 +76,7 @@ def _extract_pdf(path: Path) -> str:
 def _extract_docx(path: Path) -> str:
     """从 Word 文档提取文本。"""
     from docx import Document
+
     doc = Document(str(path))
     return "\n".join(p.text for p in doc.paragraphs)
 
@@ -96,7 +99,7 @@ def _parse_text_to_struct(text: str) -> dict:
             # 尝试提取姓名
             for prefix in ["resume:", "简历：", "resume：", "简历:"]:
                 if lower.startswith(prefix.lower()):
-                    result["name"] = line[len(prefix):].strip()
+                    result["name"] = line[len(prefix) :].strip()
                     break
         elif "skill" in lower or "技能" in lower:
             # 提取技能列表
@@ -105,6 +108,7 @@ def _parse_text_to_struct(text: str) -> dict:
         elif "experience" in lower or "经验" in lower:
             # 提取经验年数
             import re
+
             match = re.search(r"(\d+)\s*年", line)
             if match:
                 result["experience_years"] = int(match.group(1))

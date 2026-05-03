@@ -4,7 +4,6 @@
 """
 
 import os
-import pytest
 import subprocess
 import sys
 import tempfile
@@ -13,6 +12,7 @@ from pathlib import Path
 
 def _get_load_config():
     from src.config import load_config
+
     return load_config
 
 
@@ -54,7 +54,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
         env = {k: v for k, v in os.environ.items() if k not in ("LLM_MODEL", "LLM_API_KEY", "LLM_API_BASE", "DEBUG")}
         result = subprocess.run(
             [sys.executable, "-c", code],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             cwd=str(Path(__file__).parent.parent.parent),
             env=env,
         )
@@ -83,7 +84,8 @@ with tempfile.TemporaryDirectory() as tmpdir:
 """
         result = subprocess.run(
             [sys.executable, "-c", code],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
             cwd=str(Path(__file__).parent.parent.parent),
             env={**os.environ, "DEBUG": ""},
         )

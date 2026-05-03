@@ -3,11 +3,10 @@
 覆盖：有效成绩汇总、空报告处理、平均分计算。
 """
 
-import pytest
-
 
 def _get_report_generator():
     from src.graph.builder import generate_report
+
     return generate_report
 
 
@@ -42,22 +41,29 @@ class TestReportGeneration:
         """无有效成绩 → status: no_valid_evaluations。"""
         generate_report = _get_report_generator()
 
-        report = generate_report([], [
-            {"topic_id": "topic_1", "topic_name": "A", "status": "pending"},
-        ])
+        report = generate_report(
+            [],
+            [
+                {"topic_id": "topic_1", "topic_name": "A", "status": "pending"},
+            ],
+        )
 
         assert report["status"] == "no_valid_evaluations"
 
     def test_report_json_serializable(self):
         """报告应可序列化为 JSON。"""
         import json
+
         generate_report = _get_report_generator()
 
-        report = generate_report([
-            {"score": 80, "topic_id": "topic_1", "rationale": "x" * 50},
-        ], [
-            {"topic_id": "topic_1", "topic_name": "A", "status": "completed"},
-        ])
+        report = generate_report(
+            [
+                {"score": 80, "topic_id": "topic_1", "rationale": "x" * 50},
+            ],
+            [
+                {"topic_id": "topic_1", "topic_name": "A", "status": "completed"},
+            ],
+        )
 
         # 不应抛异常
         json.dumps(report)

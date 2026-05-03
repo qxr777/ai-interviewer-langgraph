@@ -122,7 +122,7 @@ Phase 1 为 CLI 运行，Phase 2 需要暴露 HTTP 接口供前端调用。
 | 任务 | 说明 | 时间估计 | 依赖 |
 |------|------|----------|------|
 | T34 | 初始化前端项目（`web/` 目录）：`npm create vite@latest` + TypeScript + React，配置 Tailwind CSS 和 Radix UI | 45 分钟 | T01 |
-| T35 | 配置 `datamodel-code-generator` CI 脚本：从后端 Pydantic 模型生成 `web/src/types/generated.ts` TypeScript 接口 | 60 分钟 | T04, T34 |
+| T35 | 配置 `scripts/generate_ts_types.py` CI 脚本：从后端 Pydantic 模型生成 `web/src/types/generated.ts` TypeScript 接口 | 60 分钟 | T04, T34 |
 | T36 | 安装并配置 Zustand（状态管理）和 TanStack Query（数据获取），创建项目目录结构（components/ pages/ stores/ services/） | 45 分钟 | T34 |
 
 **并行**: T35 与 T36 可在 T34 完成后并行。
@@ -161,8 +161,8 @@ Phase 1 为 CLI 运行，Phase 2 需要暴露 HTTP 接口供前端调用。
 |------|------|----------|------|
 | T45 | 联调：启动 FastAPI + Vite 开发服务器，验证面试启动 → 问答循环 → SSE 流式推送完整链路 | 90 分钟 | T32, T37, T41, T42, T43 |
 | T46 | 联调：验证 Arbitration 页面 → 人工操作 → 恢复面试流程的完整链路 | 60 分钟 | T32, T38, T41, T43 |
-| T47 | 编写 `tests-e2e/` 端到端测试（Playwright）：正常路径 E2E（启动 → 3 轮问答 → 报告页面） | 90 分钟 | T45 |
-| T48 | 编写 `tests-e2e/` 端到端测试（Playwright）：熔断路径 E2E（模拟 σ > 15 → Arbitration 页面出现 → 人工操作 → 恢复） | 90 分钟 | T46, T47 |
+| T47 | 编写 `web/tests-e2e/` 端到端测试（Playwright）：正常路径 E2E（启动 → 问答 → 报告页面） | 90 分钟 | T45 |
+| T48 | 编写 `web/tests-e2e/` 端到端测试（Playwright）：熔断路径 E2E（仲裁页面出现 → 人工操作 → 恢复） | 90 分钟 | T46, T47 |
 
 ---
 

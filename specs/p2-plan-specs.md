@@ -190,18 +190,22 @@ tests/
     mock_resume.pdf       # 模拟简历文件
     sample_state.json     # 预填充的 InterviewState 快照
 
-web/                      # 前端（Phase 2+）
+web/                      # 前端（已完成）
   src/
     components/           # 可复用 UI 组件
     pages/                # 页面路由（Interview / Arbitration / Report）
     stores/               # Zustand 状态管理
     services/             # API 客户端（REST + SSE）
-    types/                # TypeScript 类型定义
+    types/                # TypeScript 类型定义（自动生成）
+  tests-e2e/              # 端到端测试（Playwright）
   index.html
   vite.config.ts
   package.json
 
-tests-e2e/                # 端到端测试（Playwright）
+scripts/                  # 工具脚本
+  generate_ts_types.py    # 从 Pydantic 模型生成 TypeScript 类型
+
+tests-e2e/                # 端到端测试（已移至 web/tests-e2e/）
 ```
 
 ## 6. 技术选型与 MVP 范围 (Tech Stack & MVP Scope)
@@ -216,27 +220,23 @@ tests-e2e/                # 端到端测试（Playwright）
 | 数据校验 | Pydantic v2 | 用于 InterviewState 和工具参数校验 |
 | 测试框架 | pytest + pytest-asyncio | 异步图节点测试 |
 | 持久化（MVP） | LangGraph 内置 MemorySaver | MVP 阶段内存存储，后续可切换 Postgres |
-| 人工断点（MVP） | 终端交互式输入 | MVP 阶段 CLI 输入，后续切换 Web API |
+| 人工断点 | Web 前端仲裁页面 | `web/src/pages/Arbitration.tsx`：CONTINUE/SKIP/END 按钮 |
 
 ### 6.2 MVP 范围
 
-**纳入 MVP（Phase 1）**:
+**已实现（Phase 1 + Phase 2）**:
 - 简历上传 → 解析 → 生成 3-5 个议题大纲
 - 单轮问答循环：提问 → 候选人文本作答 → 3 路并行评估 → σ 路由
 - 高置信度路径：平滑流转至下一议题
 - 中等置信度路径：触发 CoT 重试一次
-- 低置信度路径：终端人工断点（输入 CONTINUE / SKIP）
+- 低置信度路径：Web 前端仲裁页面（CONTINUE / SKIP / END）
 - 所有议题完成后输出结构化面试报告（JSON）
-- PII 脱敏、防反客为主护栏
-
-**不纳入 MVP（Phase 2+）**:
-- 语音输入/输出（仅文本）
-- Web UI / API 服务（仅 CLI 运行）
-  - Phase 2 前端：React 19 + Vite + Tailwind，SSE 实时对话流
-  - Phase 2 后端：FastAPI HTTP + WebSocket 服务
-- Postgres 持久化 / Checkpoint 外部存储
-- 多 LLM 提供商自动切换
-- 面试报告可视化（PDF/HTML 导出）
+- PII 脱敏、防反客为主护栏（prompt 级 + 代码级注入检测）
+- FastAPI HTTP + SSE 服务（REST 控制 + 实时事件推送）
+- React 18 + Vite + Zustand + Radix UI + Tailwind 前端
+- Playwright E2E 测试（`web/tests-e2e/`）
+- CI 质量门禁（pre-commit + ruff + mypy + detect-secrets + 前端 lint + 类型生成验证）
+- datamodel-code-generator CI 脚本：从 Pydantic 模型自动生成 TypeScript 类型
 
 ## 7. 测试策略 (Testing Strategy)
 
@@ -263,6 +263,9 @@ tests-e2e/                # 端到端测试（Playwright）
 | `pii` 模块 | 单元测试 | 输入含电话/地址文本 → 对应字段被替换为 `[REDACTED]` |
 | 完整图流转 | 集成测试 | 从空状态启动 → 经历 3 个议题 → 最终输出面试报告 JSON |
 | 熔断路径 | 集成测试 | 模拟 σ > 15 → 图挂起到 Human_Supervisor → 人工输入后恢复 |
+| API 端点 | 集成测试 | REST 路由 + SSE 端点响应格式验证 |
+| E2E 正常路径 | Playwright | 面试页面 UI 渲染 + 报告页面 UI 渲染 |
+| E2E 仲裁路径 | Playwright | 仲裁页面按钮验证 + CONTINUE/END 操作验证 |
 
 ### 7.3 Mock 策略
 
@@ -323,21 +326,29 @@ tests-e2e/                # 端到端测试（Playwright）
 ├── .env.example          # 环境变量模板（提交至 git）
 ├── .env                  # 实际密钥和配置（不提交，.gitignore）
 ├── config.yaml           # 非敏感配置（σ 阈值、N 值、最大轮次等）
-└── src/config.py         # 配置加载器：从 .env + config.yaml 合并
+├── src/config.py         # 配置加载器：从 .env + config.yaml 合并
+├── .secrets.baseline     # detect-secrets 扫描基线
+└── scripts/
+    └── generate_ts_types.py  # TypeScript 类型生成脚本
 ```
 
 - 敏感信息（API Key）仅通过 `.env` 加载
 - 业务配置（阈值、并发数）通过 `config.yaml` 管理，可不经代码修改即可调整
+- CI 中通过 `generate_ts_types.py` 验证类型与后端模型同步
 
 ### 9.3 CI 与质量门禁
 
 | 阶段 | 工具 | 触发条件 | 失败动作 |
 |------|------|----------|----------|
 | 代码风格 | `ruff check` | 每次 commit (pre-commit) | 阻止提交 |
-| 类型检查 | `mypy src/` | 每次 push | 阻止合并 |
-| 单元测试 | `pytest tests/unit/` | 每次 push | 阻止合并 |
-| 集成测试 | `pytest tests/integration/` | 每次 push | 阻止合并 |
+| 代码格式化 | `ruff format` | 每次 commit (pre-commit) | 阻止提交 |
 | 密钥扫描 | `detect-secrets` | 每次 commit (pre-commit) | 阻止提交 |
+| 类型检查 | `mypy src/` | 每次 push | 阻止合并 |
+| 单元测试 | `pytest tests/` | 每次 push | 阻止合并 |
+| 类型生成验证 | `generate_ts_types.py` + `git diff --exit-code` | 每次 push | 阻止合并（类型过期） |
+| 前端 ESLint | `eslint` | 每次 push | 阻止合并 |
+| 前端 TypeScript | `tsc --noEmit` | 每次 push | 阻止合并 |
+| 前端构建 | `vite build` | 每次 push | 阻止合并 |
 
 ### 9.4 日志与可观测性
 
